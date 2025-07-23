@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz PortoEx</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo-container">
+                <img src="portoex-logo.png" alt="PortoEx Logo" class="logo">
+            </div>
+            <div class="score-container">
+                <span id="score">0</span>/<span id="total-questions">7</span>
+            </div>
+        </header>
+
+        <main>
+            <div id="start-screen" class="screen active">
+                <h1>Bem-vindo ao Quiz PortoEx!</h1>
+                <p>Teste seu conhecimento sobre a PortoEx com este quiz divertido.</p>
+                <button id="start-btn" class="btn">Começar Quiz</button>
+            </div>
+
+            <div id="quiz-screen" class="screen">
+                <div class="question-container">
+                    <div class="progress-bar">
+                        <div class="progress"></div>
+                    </div>
+                    <h2 id="question-text"></h2>
+                    <div id="options" class="options-container">
+                        <!-- Options will be added by JavaScript -->
+                    </div>
+                </div>
+                <button id="next-btn" class="btn" disabled>Próxima Pergunta</button>
+            </div>
+
+            <div id="result-screen" class="screen">
+                <div class="result-content">
+                    <h2>Quiz Concluído!</h2>
+                    <div class="result-score">
+                        Sua pontuação: <span id="final-score">0</span>/<span id="total-questions-final">7</span>
+                    </div>
+                    <div id="result-message"></div>
+                    <button id="restart-btn" class="btn">Jogar Novamente</button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Animation elements -->
+    <div id="siren-effect" class="siren-effect"></div>
+    <div id="clapping-hands" class="clapping-hands">👏</div>
+    
+    <!-- Audio elements -->
+    <audio id="correct-sound" src="https://assets.mixkit.co/sfx/preview/mixkit-correct-answer-tone-2870.mp3" preload="auto"></audio>
+    <audio id="wrong-sound" src="https://assets.mixkit.co/sfx/preview/mixkit-wrong-answer-fail-notification-946.mp3" preload="auto"></audio>
+    <audio id="complete-sound" src="https://assets.mixkit.co/sfx/preview/mixkit-achievement-bell-600.mp3" preload="auto"></audio>
+    <audio id="clapping-sound" src="https://assets.mixkit.co/sfx/preview/mixkit-achievement-bell-600.mp3" preload="auto"></audio>
+    
+    <script src="script.js"></script>
+</body>
+</html>

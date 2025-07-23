@@ -1,5 +1,9 @@
-from http.server import HTTPServer, SimpleHTTPRequestHandler
+from http.server import SimpleHTTPRequestHandler
+from wsgiref.simple_server import make_server
+from wsgiref.util import setup_testing_defaults
 import os
+import mimetypes
+import posixpath
 
 class CORSRequestHandler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
@@ -11,16 +15,99 @@ class CORSRequestHandler(SimpleHTTPRequestHandler):
         self.send_header('Cache-Control', 'no-store, no-cache, must-revalidate')
         return super().end_headers()
 
-def run(server_class=HTTPServer, handler_class=CORSRequestHandler, port=8080):
-    server_address = ('', port)
-    httpd = server_class(server_address, handler_class)
-    print(f"Starting server on port {port}...")
-    print(f"Access the quiz at: http://localhost:{port}")
-    print("Press Ctrl+C to stop the server")
-    print("\nIf you can't access the page, please check:")
-    print("1. Your firewall settings")
-    print("2. If another program is using port 8080")
-    httpd.serve_forever()
+def guess_type(path):
+    """Guess the type of a file based on its filename."""
+    base, ext = posixpath.splitext(path)
+    if ext.lower() == '.js':
+        return 'application/javascript'
+    elif ext.lower() in ('.html', '.htm'):
+        return 'text/html'
+    elif ext.lower() == '.css':
+        return 'text/css'
+    elif ext.lower() in ('.jpg', '.jpeg'):
+        return 'image/jpeg'
+    elif ext.lower() == '.png':
+        return 'image/png'
+    elif ext.lower() == '.gif':
+        return 'image/gif'
+    elif ext.lower() == '.svg':
+        return 'image/svg+xml'
+    else:
+        return 'application/octet-stream'
 
+def simple_app(environ, start_response):
+    # Default to index.html for the root path
+    path = environ.get('PATH_INFO', '/').lstrip('/')
+    if not path:
+        path = 'index.html'
+    
+    # Map path to filesystem
+    static_dir = os.path.join(os.path.dirname(__file__), 'static')
+    full_path = os.path.normpath(os.path.join(static_dir, path.lstrip('/')))
+    
+    # Security: Prevent directory traversal
+    if not full_path.startswith(static_dir):
+        status = '403 Forbidden'
+        headers = [('Content-type', 'text/plain')]
+        start_response(status, headers)
+        return [b'Access denied']
+    
+    # If path is a directory, look for index.html
+    if os.path.isdir(full_path):
+        index_path = os.path.join(full_path, 'index.html')
+        if os.path.exists(index_path):
+            full_path = index_path
+        else:
+            status = '404 Not Found'
+            headers = [('Content-type', 'text/plain')]
+            start_response(status, headers)
+            return [b'Directory index not found']
+    
+    # Check if file exists
+    if not os.path.isfile(full_path):
+        # For SPA routing, serve index.html for any unknown paths
+        index_path = os.path.join(static_dir, 'index.html')
+        if os.path.exists(index_path):
+            full_path = index_path
+        else:
+            status = '404 Not Found'
+            headers = [('Content-type', 'text/plain')]
+            start_response(status, headers)
+            return [b'File not found']
+    
+    # Read and serve the file
+    try:
+        with open(full_path, 'rb') as f:
+            content = f.read()
+        
+        # Determine content type
+        content_type = guess_type(path)
+        
+        status = '200 OK'
+        headers = [
+            ('Content-type', content_type),
+            ('Content-Length', str(len(content))),
+            ('Cache-Control', 'no-store, no-cache, must-revalidate'),
+            ('Access-Control-Allow-Origin', '*')
+        ]
+        
+        start_response(status, headers)
+        return [content]
+    except Exception as e:
+        status = '500 Internal Server Error'
+        headers = [('Content-type', 'text/plain')]
+        start_response(status, headers)
+        return [str(e).encode('utf-8')]
+
+# WSGI application
+def app(environ, start_response):
+    return simple_app(environ, start_response)
+
+# For running locally
 if __name__ == '__main__':
-    run()
+    port = int(os.environ.get('PORT', 8080))
+    with make_server('', port, app) as httpd:
+        print(f"Starting server on port {port}...")
+        print(f"Access the quiz at: http://localhost:{port}")
+        print("Press Ctrl+C to stop the server")
+        httpd.serve_forever()

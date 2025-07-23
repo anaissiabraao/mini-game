@@ -5,6 +5,16 @@ import os
 import mimetypes
 import posixpath
 
+# Enable CORS for all routes
+def add_cors_headers(headers):
+    headers.extend([
+        ('Access-Control-Allow-Origin', '*'),
+        ('Access-Control-Allow-Methods', 'GET, POST, OPTIONS'),
+        ('Access-Control-Allow-Headers', 'Content-Type'),
+        ('Cache-Control', 'no-store, no-cache, must-revalidate')
+    ])
+    return headers
+
 class CORSRequestHandler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=os.path.join(os.path.dirname(__file__), 'static'), **kwargs)
@@ -101,7 +111,78 @@ def simple_app(environ, start_response):
 
 # WSGI application
 def app(environ, start_response):
-    return simple_app(environ, start_response)
+    # Handle CORS preflight requests
+    if environ['REQUEST_METHOD'] == 'OPTIONS':
+        headers = [('Content-Type', 'text/plain')]
+        headers = add_cors_headers(headers)
+        start_response('204 No Content', headers)
+        return [b'']
+    
+    # Handle regular requests
+    response_headers = []
+    
+    try:
+        # Get the path from the environment
+        path = environ.get('PATH_INFO', '/').lstrip('/')
+        if not path:
+            path = 'index.html'
+            
+        # Map path to filesystem
+        static_dir = os.path.join(os.path.dirname(__file__), 'static')
+        full_path = os.path.normpath(os.path.join(static_dir, path.lstrip('/')))
+        
+        # Security: Prevent directory traversal
+        if not full_path.startswith(static_dir):
+            headers = [('Content-Type', 'text/plain')]
+            headers = add_cors_headers(headers)
+            start_response('403 Forbidden', headers)
+            return [b'Access denied']
+        
+        # If path is a directory, look for index.html
+        if os.path.isdir(full_path):
+            index_path = os.path.join(full_path, 'index.html')
+            if os.path.exists(index_path):
+                full_path = index_path
+            else:
+                headers = [('Content-Type', 'text/plain')]
+                headers = add_cors_headers(headers)
+                start_response('404 Not Found', headers)
+                return [b'Directory index not found']
+        
+        # Check if file exists
+        if not os.path.isfile(full_path):
+            # For SPA routing, serve index.html for any unknown paths
+            index_path = os.path.join(static_dir, 'index.html')
+            if os.path.exists(index_path):
+                full_path = index_path
+            else:
+                headers = [('Content-Type', 'text/plain')]
+                headers = add_cors_headers(headers)
+                start_response('404 Not Found', headers)
+                return [b'File not found']
+        
+        # Read and serve the file
+        with open(full_path, 'rb') as f:
+            content = f.read()
+        
+        # Determine content type
+        content_type = guess_type(path)
+        
+        # Prepare response headers
+        headers = [
+            ('Content-Type', content_type),
+            ('Content-Length', str(len(content)))
+        ]
+        headers = add_cors_headers(headers)
+        
+        start_response('200 OK', headers)
+        return [content]
+        
+    except Exception as e:
+        headers = [('Content-Type', 'text/plain')]
+        headers = add_cors_headers(headers)
+        start_response('500 Internal Server Error', headers)
+        return [str(e).encode('utf-8')]
 
 # For running locally
 if __name__ == '__main__':

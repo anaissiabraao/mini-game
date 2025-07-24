@@ -53,7 +53,7 @@ const questions = [
             "Ana Elícia",
             "Fabrício",
             "Marlon Marques",
-            "José Agnaldo",
+            "José Aguinaldo",
             "Isadora"
         ],
         correct: 3,

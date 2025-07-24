@@ -32,7 +32,7 @@ class PortoExQuiz:
                     "1. Ana Elícia",
                     "2. Fabrício",
                     "3. Marlon Marques",
-                    "4. José Agnaldo",
+                    "4. José Aguinaldo",
                     "5. Isadora"
                 ],
                 "correct": 3
